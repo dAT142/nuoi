@@ -1276,7 +1276,7 @@
 <!-- Confirm Modal -->
 <div class="confirm-modal" id="confirmModal">
     <div class="confirm-box">
-        <h2 style="margin-bottom:20px;">💝 Gửi lời nhắn tới Ceo</h2>
+        <h2 style="margin-bottom:20px;">💝 Gửi lời nhắn tới Đạt</h2>
 
         <input type="text" id="donorNameInput" placeholder="Tên của bạn">
 
@@ -1491,7 +1491,7 @@ submitDonationBtn.onclick = () => {
     confirmModal.style.display = 'none';
 
     showToast(
-        `Cảm ơn ${name} đã nuôi HoteGenZ ❤️`,
+        `Cảm ơn ${name} đã nuôi Đạt ❤️`,
         '💝'
     );
 };
@@ -1575,6 +1575,537 @@ submitBillBtn.onclick = () => {
         '💳'
     );
 };
+</script>
+<!-- ========================= -->
+<!-- THÊM NGAY TRƯỚC </body> -->
+<!-- ========================= -->
+
+<!-- ADMIN LOGIN MODAL -->
+<div class="payment-modal" id="adminLoginModal">
+    <div class="payment-box">
+
+        <div class="payment-header">
+            <h2>🔐 Admin Login</h2>
+            <button class="close-btn" id="closeAdminLogin">✖</button>
+        </div>
+
+        <input
+            type="password"
+            id="adminPasswordInput"
+            placeholder="Nhập mật khẩu admin"
+            style="
+                width:100%;
+                padding:15px;
+                border-radius:15px;
+                border:2px solid #eee;
+                margin-bottom:15px;
+                font-family:inherit;
+                font-size:1rem;
+            "
+        >
+
+        <button class="submit-donation-btn" id="adminLoginBtn">
+            Đăng nhập
+        </button>
+
+    </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div class="payment-modal" id="adminModal">
+    <div class="payment-box">
+
+        <div class="payment-header">
+            <h2>🛡️ Admin duyệt bill</h2>
+            <button class="close-btn" id="closeAdmin">✖</button>
+        </div>
+
+        <button
+            id="logoutAdminBtn"
+            class="cancel-btn"
+            style="margin-bottom:15px;"
+        >
+            🚪 Logout
+        </button>
+
+        <div id="adminPendingList"></div>
+
+    </div>
+</div>
+
+<style>
+
+/* ========================= */
+/* ADMIN */
+/* ========================= */
+
+.pending-card{
+    border:2px solid #eee;
+    border-radius:20px;
+    padding:15px;
+    margin-bottom:15px;
+}
+
+.pending-card img{
+    width:100%;
+    border-radius:15px;
+    margin:10px 0;
+}
+
+.approve-btn{
+    width:100%;
+    border:none;
+    padding:12px;
+    border-radius:12px;
+    background:linear-gradient(135deg,#00b894,#55efc4);
+    color:white;
+    font-weight:700;
+    cursor:pointer;
+    margin-top:10px;
+}
+
+.reject-btn{
+    width:100%;
+    border:none;
+    padding:12px;
+    border-radius:12px;
+    background:#ff7675;
+    color:white;
+    font-weight:700;
+    cursor:pointer;
+    margin-top:10px;
+}
+
+</style>
+
+<script>
+
+/* ========================================= */
+/* PASSWORD */
+/* ========================================= */
+
+CONFIG.adminPassword = "Dat@2026#Vip";
+
+/* ========================================= */
+/* STORAGE */
+/* ========================================= */
+
+const STORAGE_KEYS = {
+    APPROVED: 'approved_donations',
+    PENDING: 'pending_donations'
+};
+
+function loadDonations(){
+
+    const approved =
+        localStorage.getItem(STORAGE_KEYS.APPROVED);
+
+    const pending =
+        localStorage.getItem(STORAGE_KEYS.PENDING);
+
+    if(approved){
+
+        CONFIG.recentDonations =
+            JSON.parse(approved);
+    }
+
+    window.pendingDonations =
+        pending
+            ? JSON.parse(pending)
+            : [];
+}
+
+function saveApprovedDonations(){
+
+    localStorage.setItem(
+        STORAGE_KEYS.APPROVED,
+        JSON.stringify(CONFIG.recentDonations)
+    );
+}
+
+function savePendingDonations(){
+
+    localStorage.setItem(
+        STORAGE_KEYS.PENDING,
+        JSON.stringify(window.pendingDonations)
+    );
+}
+
+/* ========================================= */
+/* LOAD DATA */
+/* ========================================= */
+
+loadDonations();
+
+renderDonationList();
+
+renderMarquee();
+
+/* ========================================= */
+/* ADMIN ELEMENTS */
+/* ========================================= */
+
+const adminModal =
+    document.getElementById('adminModal');
+
+const closeAdmin =
+    document.getElementById('closeAdmin');
+
+const adminPendingList =
+    document.getElementById('adminPendingList');
+
+const adminLoginModal =
+    document.getElementById('adminLoginModal');
+
+const adminPasswordInput =
+    document.getElementById('adminPasswordInput');
+
+const adminLoginBtn =
+    document.getElementById('adminLoginBtn');
+
+const closeAdminLogin =
+    document.getElementById('closeAdminLogin');
+
+const logoutAdminBtn =
+    document.getElementById('logoutAdminBtn');
+
+/* ========================================= */
+/* OPEN ADMIN */
+/* PRESS A 3 TIMES */
+/* ========================================= */
+
+// =========================
+// MOBILE ADMIN OPEN
+// TAP AVATAR 5 LẦN
+// =========================
+
+let adminTap = 0;
+
+const avatarOpenAdmin =
+    document.querySelector('.avatar-container');
+
+avatarOpenAdmin.addEventListener(
+    'click',
+    ()=>{
+
+        adminTap++;
+
+        if(adminTap >= 5){
+
+            const logged =
+                localStorage.getItem(
+                    'admin_logged'
+                );
+
+            if(logged === 'true'){
+
+                adminModal.style.display =
+                    'flex';
+
+                renderAdminPanel();
+
+            }else{
+
+                adminLoginModal.style.display =
+                    'flex';
+            }
+
+            adminTap = 0;
+        }
+
+        setTimeout(()=>{
+
+            adminTap = 0;
+
+        },1500);
+    }
+);
+
+        adminTap++;
+
+        if(adminTap >= 3){
+
+            const logged =
+                localStorage.getItem('admin_logged');
+
+            if(logged === 'true'){
+
+                adminModal.style.display = 'flex';
+
+                renderAdminPanel();
+
+            }else{
+
+                adminLoginModal.style.display = 'flex';
+            }
+
+            adminTap = 0;
+        }
+
+        setTimeout(()=>{
+            adminTap = 0;
+        },1000);
+    }
+});
+
+/* ========================================= */
+/* LOGIN */
+/* ========================================= */
+
+closeAdminLogin.onclick = () => {
+    adminLoginModal.style.display = 'none';
+};
+
+adminLoginBtn.onclick = () => {
+
+    const password =
+        adminPasswordInput.value.trim();
+
+    if(password !== CONFIG.adminPassword){
+
+        showToast(
+            'Sai mật khẩu 😢',
+            '❌'
+        );
+
+        adminPasswordInput.value = '';
+
+        return;
+    }
+
+    localStorage.setItem(
+        'admin_logged',
+        'true'
+    );
+
+    adminPasswordInput.value = '';
+
+    adminLoginModal.style.display = 'none';
+
+    adminModal.style.display = 'flex';
+
+    renderAdminPanel();
+
+    showToast(
+        'Đăng nhập admin thành công 🛡️',
+        '✅'
+    );
+};
+
+adminPasswordInput.addEventListener(
+    'keydown',
+    (e)=>{
+
+        if(e.key === 'Enter'){
+
+            adminLoginBtn.click();
+        }
+    }
+);
+
+/* ========================================= */
+/* LOGOUT */
+/* ========================================= */
+
+logoutAdminBtn.onclick = () => {
+
+    localStorage.removeItem(
+        'admin_logged'
+    );
+
+    adminModal.style.display = 'none';
+
+    showToast(
+        'Đã logout 👋',
+        '🚪'
+    );
+};
+
+/* ========================================= */
+/* CLOSE ADMIN */
+/* ========================================= */
+
+closeAdmin.onclick = () => {
+
+    adminModal.style.display = 'none';
+};
+
+/* ========================================= */
+/* GHI ĐÈ SUBMIT DONATION */
+/* ========================================= */
+
+submitDonationBtn.onclick = () => {
+
+    const name =
+        donorNameInput.value.trim() || 'Anonymous';
+
+    const message =
+        donorMessageInput.value.trim() || '❤️';
+
+    const avatars = [
+        '😎','🥰','🤑','🔥',
+        '💖','🎉','👑','💎'
+    ];
+
+    const newDonation = {
+
+        avatar:
+            avatars[
+                Math.floor(
+                    Math.random() * avatars.length
+                )
+            ],
+
+        name: name,
+
+        message: message,
+
+        amount: selectedAmount,
+
+        time: new Date().toISOString(),
+
+        bill:
+            billPreview.querySelector('img')?.src || ''
+    };
+
+    // SAVE TO PENDING
+    window.pendingDonations.unshift(
+        newDonation
+    );
+
+    savePendingDonations();
+
+    // RESET
+    donorNameInput.value = '';
+    donorMessageInput.value = '';
+
+    uploadedBill = null;
+
+    billPreview.innerHTML = `
+        <div style="font-size:4rem;">🧾</div>
+        <p>Ấn để tải bill lên</p>
+    `;
+
+    confirmModal.style.display = 'none';
+
+    showToast(
+        'Đã gửi bill chờ admin duyệt 💝',
+        '⏳'
+    );
+};
+
+/* ========================================= */
+/* RENDER ADMIN */
+/* ========================================= */
+
+function renderAdminPanel(){
+
+    if(window.pendingDonations.length === 0){
+
+        adminPendingList.innerHTML = `
+            <p style="text-align:center;">
+                Không có bill chờ duyệt 😎
+            </p>
+        `;
+
+        return;
+    }
+
+    adminPendingList.innerHTML =
+        window.pendingDonations.map((d,index)=>`
+
+            <div class="pending-card">
+
+                <h3>${d.name}</h3>
+
+                <p style="margin:10px 0;">
+                    ${formatCurrency(d.amount)}
+                </p>
+
+                <p>
+                    "${d.message}"
+                </p>
+
+                ${
+                    d.bill
+                    ? `<img src="${d.bill}">`
+                    : ''
+                }
+
+                <button
+                    class="approve-btn"
+                    onclick="approveDonation(${index})"
+                >
+                    ✅ Duyệt
+                </button>
+
+                <button
+                    class="reject-btn"
+                    onclick="rejectDonation(${index})"
+                >
+                    ❌ Từ chối
+                </button>
+
+            </div>
+
+        `).join('');
+}
+
+/* ========================================= */
+/* APPROVE */
+/* ========================================= */
+
+window.approveDonation = function(index){
+
+    const donation =
+        window.pendingDonations[index];
+
+    CONFIG.recentDonations.unshift(
+        donation
+    );
+
+    window.pendingDonations.splice(
+        index,
+        1
+    );
+
+    saveApprovedDonations();
+
+    savePendingDonations();
+
+    renderDonationList();
+
+    renderMarquee();
+
+    renderAdminPanel();
+
+    showToast(
+        'Đã duyệt donate 💝',
+        '✅'
+    );
+};
+
+/* ========================================= */
+/* REJECT */
+/* ========================================= */
+
+window.rejectDonation = function(index){
+
+    window.pendingDonations.splice(
+        index,
+        1
+    );
+
+    savePendingDonations();
+
+    renderAdminPanel();
+
+    showToast(
+        'Đã từ chối bill ❌',
+        '🚫'
+    );
+};
+
 </script>    
 </body>
 </html>
