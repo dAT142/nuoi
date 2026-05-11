@@ -1821,33 +1821,6 @@ avatarOpenAdmin.addEventListener(
     }
 );
 
-        adminTap++;
-
-        if(adminTap >= 3){
-
-            const logged =
-                localStorage.getItem('admin_logged');
-
-            if(logged === 'true'){
-
-                adminModal.style.display = 'flex';
-
-                renderAdminPanel();
-
-            }else{
-
-                adminLoginModal.style.display = 'flex';
-            }
-
-            adminTap = 0;
-        }
-
-        setTimeout(()=>{
-            adminTap = 0;
-        },1000);
-    }
-});
-
 /* ========================================= */
 /* LOGIN */
 /* ========================================= */
