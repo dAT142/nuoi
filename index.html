@@ -1725,6 +1725,10 @@ submitBillBtn.onclick = () => {
 
 </style>
 
+<!-- FIREBASE REALTIME DATABASE - dùng chung mọi máy -->
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+
 <script>
 
 /* ========================================= */
@@ -1734,139 +1738,141 @@ submitBillBtn.onclick = () => {
 CONFIG.adminPassword = "hotgenz.com";
 
 /* ========================================= */
-/* STORAGE */
+/* FIREBASE CONFIG - DÁN CONFIG CỦA BẠN Ở ĐÂY */
 /* ========================================= */
 
-const STORAGE_KEYS = {
-    APPROVED: 'approved_donations',
-    PENDING: 'pending_donations'
+const firebaseConfig = {
+    apiKey: "DAN_API_KEY_VAO_DAY",
+    authDomain: "DAN_PROJECT.firebaseapp.com",
+    databaseURL: "https://DAN_PROJECT-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "DAN_PROJECT",
+    storageBucket: "DAN_PROJECT.appspot.com",
+    messagingSenderId: "DAN_MESSAGING_ID",
+    appId: "DAN_APP_ID"
 };
 
-function loadDonations(){
+let db = null;
+let firebaseReady = false;
+window.pendingDonations = [];
 
-    const approved =
-        localStorage.getItem(STORAGE_KEYS.APPROVED);
+function isFirebaseConfigured(){
+    return !firebaseConfig.apiKey.includes('DAN_')
+        && !firebaseConfig.projectId.includes('DAN_')
+        && !firebaseConfig.databaseURL.includes('DAN_');
+}
 
-    const pending =
-        localStorage.getItem(STORAGE_KEYS.PENDING);
-
-    if(approved){
-
-        CONFIG.recentDonations =
-            JSON.parse(approved);
+function initFirebase(){
+    if(!isFirebaseConfigured()){
+        console.warn('Bạn chưa cấu hình Firebase. Hãy dán firebaseConfig thật vào file.');
+        showToast('Chưa cấu hình Firebase nên chưa đồng bộ được 😢', '⚠️');
+        return;
     }
 
-    window.pendingDonations =
-        pending
-            ? JSON.parse(pending)
-            : [];
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+    firebaseReady = true;
+
+    listenApprovedDonations();
+    listenPendingDonations();
 }
 
-function saveApprovedDonations(){
+function listenApprovedDonations(){
+    db.ref('approved_donations').on('value', snapshot => {
+        const data = snapshot.val() || {};
 
-    localStorage.setItem(
-        STORAGE_KEYS.APPROVED,
-        JSON.stringify(CONFIG.recentDonations)
-    );
+        CONFIG.recentDonations = Object.keys(data)
+            .map(key => ({ id: key, ...data[key] }))
+            .sort((a,b) => new Date(b.time) - new Date(a.time));
+
+        renderDonationList();
+        renderMarquee();
+    });
 }
 
-function savePendingDonations(){
+function listenPendingDonations(){
+    db.ref('pending_donations').on('value', snapshot => {
+        const data = snapshot.val() || {};
 
-    localStorage.setItem(
-        STORAGE_KEYS.PENDING,
-        JSON.stringify(window.pendingDonations)
-    );
+        window.pendingDonations = Object.keys(data)
+            .map(key => ({ id: key, ...data[key] }))
+            .sort((a,b) => new Date(b.time) - new Date(a.time));
+
+        renderAdminPanel();
+    });
 }
 
-/* ========================================= */
-/* LOAD DATA */
-/* ========================================= */
+function savePendingDonationOnline(donation){
+    if(!firebaseReady){
+        showToast('Firebase chưa sẵn sàng, chưa gửi được đơn 😢', '⚠️');
+        return Promise.reject(new Error('Firebase not ready'));
+    }
 
-loadDonations();
+    return db.ref('pending_donations').push(donation);
+}
 
-renderDonationList();
+function approveDonationOnline(donation){
+    if(!firebaseReady){
+        showToast('Firebase chưa sẵn sàng 😢', '⚠️');
+        return;
+    }
 
-renderMarquee();
+    const { id, ...cleanDonation } = donation;
+
+    db.ref('approved_donations').push(cleanDonation)
+        .then(() => db.ref('pending_donations/' + id).remove())
+        .then(() => showToast('Đã duyệt donate, mọi máy sẽ thấy ngay 💝', '✅'))
+        .catch(() => showToast('Lỗi khi duyệt đơn 😢', '❌'));
+}
+
+function rejectDonationOnline(donation){
+    if(!firebaseReady){
+        showToast('Firebase chưa sẵn sàng 😢', '⚠️');
+        return;
+    }
+
+    db.ref('pending_donations/' + donation.id).remove()
+        .then(() => showToast('Đã từ chối bill ❌', '🚫'))
+        .catch(() => showToast('Lỗi khi từ chối đơn 😢', '❌'));
+}
 
 /* ========================================= */
 /* ADMIN ELEMENTS */
 /* ========================================= */
 
-const adminModal =
-    document.getElementById('adminModal');
-
-const closeAdmin =
-    document.getElementById('closeAdmin');
-
-const adminPendingList =
-    document.getElementById('adminPendingList');
-
-const adminLoginModal =
-    document.getElementById('adminLoginModal');
-
-const adminPasswordInput =
-    document.getElementById('adminPasswordInput');
-
-const adminLoginBtn =
-    document.getElementById('adminLoginBtn');
-
-const closeAdminLogin =
-    document.getElementById('closeAdminLogin');
-
-const logoutAdminBtn =
-    document.getElementById('logoutAdminBtn');
+const adminModal = document.getElementById('adminModal');
+const closeAdmin = document.getElementById('closeAdmin');
+const adminPendingList = document.getElementById('adminPendingList');
+const adminLoginModal = document.getElementById('adminLoginModal');
+const adminPasswordInput = document.getElementById('adminPasswordInput');
+const adminLoginBtn = document.getElementById('adminLoginBtn');
+const closeAdminLogin = document.getElementById('closeAdminLogin');
+const logoutAdminBtn = document.getElementById('logoutAdminBtn');
 
 /* ========================================= */
-/* OPEN ADMIN */
-/* PRESS A 3 TIMES */
+/* OPEN ADMIN - TAP AVATAR 5 LẦN */
 /* ========================================= */
-
-// =========================
-// MOBILE ADMIN OPEN
-// TAP AVATAR 5 LẦN
-// =========================
 
 let adminTap = 0;
+const avatarOpenAdmin = document.querySelector('.avatar-container');
 
-const avatarOpenAdmin =
-    document.querySelector('.avatar-container');
+avatarOpenAdmin.addEventListener('click', () => {
+    adminTap++;
 
-avatarOpenAdmin.addEventListener(
-    'click',
-    ()=>{
+    if(adminTap >= 5){
+        const logged = localStorage.getItem('admin_logged');
 
-        adminTap++;
-
-        if(adminTap >= 5){
-
-            const logged =
-                localStorage.getItem(
-                    'admin_logged'
-                );
-
-            if(logged === 'true'){
-
-                adminModal.style.display =
-                    'flex';
-
-                renderAdminPanel();
-
-            }else{
-
-                adminLoginModal.style.display =
-                    'flex';
-            }
-
-            adminTap = 0;
+        if(logged === 'true'){
+            adminModal.style.display = 'flex';
+            renderAdminPanel();
+        }else{
+            adminLoginModal.style.display = 'flex';
         }
 
-        setTimeout(()=>{
-
-            adminTap = 0;
-
-        },1500);
+        adminTap = 0;
     }
-);
+
+    setTimeout(() => { adminTap = 0; }, 1500);
+});
 
 /* ========================================= */
 /* LOGIN */
@@ -1877,141 +1883,82 @@ closeAdminLogin.onclick = () => {
 };
 
 adminLoginBtn.onclick = () => {
-
-    const password =
-        adminPasswordInput.value.trim();
+    const password = adminPasswordInput.value.trim();
 
     if(password !== CONFIG.adminPassword){
-
-        showToast(
-            'Sai mật khẩu 😢',
-            '❌'
-        );
-
+        showToast('Sai mật khẩu 😢', '❌');
         adminPasswordInput.value = '';
-
         return;
     }
 
-    localStorage.setItem(
-        'admin_logged',
-        'true'
-    );
-
+    localStorage.setItem('admin_logged', 'true');
     adminPasswordInput.value = '';
-
     adminLoginModal.style.display = 'none';
-
     adminModal.style.display = 'flex';
-
     renderAdminPanel();
-
-    showToast(
-        'Đăng nhập admin thành công 🛡️',
-        '✅'
-    );
+    showToast('Đăng nhập admin thành công 🛡️', '✅');
 };
 
-adminPasswordInput.addEventListener(
-    'keydown',
-    (e)=>{
-
-        if(e.key === 'Enter'){
-
-            adminLoginBtn.click();
-        }
-    }
-);
+adminPasswordInput.addEventListener('keydown', e => {
+    if(e.key === 'Enter') adminLoginBtn.click();
+});
 
 /* ========================================= */
-/* LOGOUT */
+/* LOGOUT / CLOSE */
 /* ========================================= */
 
 logoutAdminBtn.onclick = () => {
-
-    localStorage.removeItem(
-        'admin_logged'
-    );
-
+    localStorage.removeItem('admin_logged');
     adminModal.style.display = 'none';
-
-    showToast(
-        'Đã logout 👋',
-        '🚪'
-    );
+    showToast('Đã logout 👋', '🚪');
 };
-
-/* ========================================= */
-/* CLOSE ADMIN */
-/* ========================================= */
 
 closeAdmin.onclick = () => {
-
     adminModal.style.display = 'none';
 };
 
 /* ========================================= */
-/* GHI ĐÈ SUBMIT DONATION */
+/* GỬI DONATE -> LƯU ONLINE PENDING */
 /* ========================================= */
 
 submitDonationBtn.onclick = () => {
+    const name = donorNameInput.value.trim() || 'Anonymous';
+    const message = donorMessageInput.value.trim() || '❤️';
 
-    const name =
-        donorNameInput.value.trim() || 'Anonymous';
-
-    const message =
-        donorMessageInput.value.trim() || '❤️';
-
-    const avatars = [
-        '😎','🥰','🤑','🔥',
-        '💖','🎉','👑','💎'
-    ];
+    const avatars = ['😎','🥰','🤑','🔥','💖','🎉','👑','💎'];
 
     const newDonation = {
-
-        avatar:
-            avatars[
-                Math.floor(
-                    Math.random() * avatars.length
-                )
-            ],
-
+        avatar: avatars[Math.floor(Math.random() * avatars.length)],
         name: name,
-
         message: message,
-
         amount: selectedAmount,
-
         time: new Date().toISOString(),
-
-        bill:
-            billPreview.querySelector('img')?.src || ''
+        bill: billPreview.querySelector('img')?.src || '',
+        status: 'pending'
     };
 
-    // SAVE TO PENDING
-    window.pendingDonations.unshift(
-        newDonation
-    );
+    submitDonationBtn.disabled = true;
+    submitDonationBtn.textContent = 'Đang gửi...';
 
-    savePendingDonations();
-
-    // RESET
-    donorNameInput.value = '';
-    donorMessageInput.value = '';
-
-    uploadedBill = null;
-
-    billPreview.innerHTML = `
-        <div style="font-size:4rem;">🧾</div>
-        <p>Ấn để tải bill lên</p>
-    `;
-
-    confirmModal.style.display = 'none';
-
-    showToast(
-        'Đã gửi bill chờ admin duyệt 💝',
-        '⏳'
-    );
+    savePendingDonationOnline(newDonation)
+        .then(() => {
+            donorNameInput.value = '';
+            donorMessageInput.value = '';
+            uploadedBill = null;
+            billPreview.innerHTML = `
+                <div style="font-size:4rem;">🧾</div>
+                <p>Ấn để tải bill lên</p>
+            `;
+            confirmModal.style.display = 'none';
+            showToast('Đã gửi bill chờ admin duyệt 💝', '⏳');
+        })
+        .catch(() => {
+            showToast('Gửi bill thất bại, kiểm tra Firebase 😢', '❌');
+        })
+        .finally(() => {
+            submitDonationBtn.disabled = false;
+            submitDonationBtn.textContent = 'Gửi ❤️';
+        });
 };
 
 /* ========================================= */
@@ -2019,113 +1966,67 @@ submitDonationBtn.onclick = () => {
 /* ========================================= */
 
 function renderAdminPanel(){
+    if(!adminPendingList) return;
+
+    if(!firebaseReady){
+        adminPendingList.innerHTML = `
+            <p style="text-align:center; line-height:1.7;">
+                ⚠️ Chưa cấu hình Firebase.<br>
+                Hãy dán firebaseConfig thật để admin máy khác duyệt được.
+            </p>
+        `;
+        return;
+    }
 
     if(window.pendingDonations.length === 0){
-
         adminPendingList.innerHTML = `
             <p style="text-align:center;">
                 Không có bill chờ duyệt 😎
             </p>
         `;
-
         return;
     }
 
-    adminPendingList.innerHTML =
-        window.pendingDonations.map((d,index)=>`
+    adminPendingList.innerHTML = window.pendingDonations.map((d,index) => `
+        <div class="pending-card">
+            <h3>${d.name}</h3>
+            <p style="margin:10px 0;">${formatCurrency(d.amount)}</p>
+            <p>"${d.message}"</p>
 
-            <div class="pending-card">
+            ${d.bill ? `<img src="${d.bill}">` : ''}
 
-                <h3>${d.name}</h3>
+            <button class="approve-btn" onclick="approveDonation(${index})">
+                ✅ Duyệt
+            </button>
 
-                <p style="margin:10px 0;">
-                    ${formatCurrency(d.amount)}
-                </p>
-
-                <p>
-                    "${d.message}"
-                </p>
-
-                ${
-                    d.bill
-                    ? `<img src="${d.bill}">`
-                    : ''
-                }
-
-                <button
-                    class="approve-btn"
-                    onclick="approveDonation(${index})"
-                >
-                    ✅ Duyệt
-                </button>
-
-                <button
-                    class="reject-btn"
-                    onclick="rejectDonation(${index})"
-                >
-                    ❌ Từ chối
-                </button>
-
-            </div>
-
-        `).join('');
+            <button class="reject-btn" onclick="rejectDonation(${index})">
+                ❌ Từ chối
+            </button>
+        </div>
+    `).join('');
 }
 
 /* ========================================= */
-/* APPROVE */
+/* APPROVE / REJECT */
 /* ========================================= */
 
 window.approveDonation = function(index){
-
-    const donation =
-        window.pendingDonations[index];
-
-    CONFIG.recentDonations.unshift(
-        donation
-    );
-
-    window.pendingDonations.splice(
-        index,
-        1
-    );
-
-    saveApprovedDonations();
-
-    savePendingDonations();
-
-    renderDonationList();
-
-    renderMarquee();
-
-    renderAdminPanel();
-
-    showToast(
-        'Đã duyệt donate 💝',
-        '✅'
-    );
+    const donation = window.pendingDonations[index];
+    if(!donation) return;
+    approveDonationOnline(donation);
 };
-
-/* ========================================= */
-/* REJECT */
-/* ========================================= */
 
 window.rejectDonation = function(index){
-
-    window.pendingDonations.splice(
-        index,
-        1
-    );
-
-    savePendingDonations();
-
-    renderAdminPanel();
-
-    showToast(
-        'Đã từ chối bill ❌',
-        '🚫'
-    );
+    const donation = window.pendingDonations[index];
+    if(!donation) return;
+    rejectDonationOnline(donation);
 };
 
+/* ========================================= */
+/* START ONLINE SYNC */
+/* ========================================= */
+
+initFirebase();
 </script>    
 </body>
 </html>
