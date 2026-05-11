@@ -709,7 +709,63 @@
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.05); }
         }
-    </style>
+
+        /* DÁN CSS BƯỚC 2 Ở ĐÂY */
+
+        .bill-modal{
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+
+        .bill-box{
+            background: white;
+            border-radius: 25px;
+            padding: 25px;
+            max-width: 420px;
+            width: 100%;
+            animation: modalShow .3s ease;
+        }
+
+        .bill-upload-area{
+            border: 3px dashed #ddd;
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: .2s;
+        }
+
+        .bill-upload-area:hover{
+            border-color: #ff6b6b;
+            background: #fff5f5;
+        }
+
+        .bill-preview img{
+            width: 100%;
+            border-radius: 15px;
+            margin-bottom: 10px;
+        }
+
+        .submit-bill-btn{
+            width: 100%;
+            border: none;
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 15px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            background: linear-gradient(135deg,#ff6b6b,#feca57);
+            color: white;
+        }
+
+        </style>
 </head>
 <body>
     <!-- Floating emojis - Rendered by JS -->
@@ -1193,10 +1249,34 @@
     </div>
 </div>
 
+<!-- BILL MODAL -->
+<div class="bill-modal" id="billModal">
+    <div class="bill-box">
+
+        <h2 style="margin-bottom:20px;">
+            📸 Gửi bill chuyển khoản
+        </h2>
+
+        <div class="bill-upload-area" id="billUploadArea">
+            <input type="file" id="billInput" accept="image/*" hidden>
+
+            <div class="bill-preview" id="billPreview">
+                <div style="font-size:4rem;">🧾</div>
+                <p>Ấn để tải bill lên</p>
+            </div>
+        </div>
+
+        <button class="submit-bill-btn" id="submitBillBtn">
+            Gửi bill ✅
+        </button>
+
+    </div>
+</div>
+
 <!-- Confirm Modal -->
 <div class="confirm-modal" id="confirmModal">
     <div class="confirm-box">
-        <h2 style="margin-bottom:20px;">💝 Gửi lời nhắn tới Đạt</h2>
+        <h2 style="margin-bottom:20px;">💝 Gửi lời nhắn tới Ceo</h2>
 
         <input type="text" id="donorNameInput" placeholder="Tên của bạn">
 
@@ -1371,8 +1451,10 @@ cancelBtn.onclick = () => {
 
 // ĐÃ THANH TOÁN
 paidBtn.onclick = () => {
+
     paymentModal.style.display = 'none';
-    confirmModal.style.display = 'flex';
+
+    billModal.style.display = 'flex';
 };
 
 // GỬI DONATE
@@ -1409,7 +1491,7 @@ submitDonationBtn.onclick = () => {
     confirmModal.style.display = 'none';
 
     showToast(
-        `Cảm ơn ${name} đã nuôi Đạt ❤️`,
+        `Cảm ơn ${name} đã nuôi HoteGenZ ❤️`,
         '💝'
     );
 };
@@ -1425,6 +1507,74 @@ window.addEventListener('click', (e) => {
         confirmModal.style.display = 'none';
     }
 });
+
+// DÁN BƯỚC 3 Ở ĐÂY
+
+const billModal = document.getElementById('billModal');
+
+const billUploadArea =
+    document.getElementById('billUploadArea');
+
+const billInput =
+    document.getElementById('billInput');
+
+const billPreview =
+    document.getElementById('billPreview');
+
+const submitBillBtn =
+    document.getElementById('submitBillBtn');
+
+let uploadedBill = null;
+
+// CLICK CHỌN ẢNH
+billUploadArea.onclick = () => {
+    billInput.click();
+};
+
+// PREVIEW ẢNH
+billInput.onchange = (e) => {
+
+    const file = e.target.files[0];
+
+    if(!file) return;
+
+    uploadedBill = file;
+
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+
+        billPreview.innerHTML = `
+            <img src="${event.target.result}">
+            <p>✅ Bill đã tải lên</p>
+        `;
+    };
+
+    reader.readAsDataURL(file);
+};
+// DÁN BƯỚC 5 Ở ĐÂY
+
+submitBillBtn.onclick = () => {
+
+    if(!uploadedBill){
+
+        showToast(
+            'Bạn chưa tải bill 😢',
+            '⚠️'
+        );
+
+        return;
+    }
+
+    billModal.style.display = 'none';
+
+    confirmModal.style.display = 'flex';
+
+    showToast(
+        'Đã xác nhận bill ✅',
+        '💳'
+    );
+};
 </script>    
 </body>
 </html>
