@@ -795,6 +795,23 @@
         <div class="donation-section">
             <h2 class="section-title" id="donateSectionTitle"></h2>
             <div class="donation-grid" id="donationGrid"></div>
+            <div style="margin-top:20px;">
+                <input
+                    type="number"
+                    id="customAmount"
+                    placeholder="Nhập số tiền tùy ý (tối thiểu 3K)"
+                    min="3000"
+                    style="
+                        width:100%;
+                        padding:18px;
+                        border-radius:18px;
+                        border:3px solid #eee;
+                        font-size:1rem;
+                        font-family:inherit;
+                        outline:none;
+                    "
+                >
+            </div>
             <button class="donate-btn" id="donateBtn"></button>
         </div>
 
@@ -901,38 +918,27 @@
                     amount: 5000,
                     emoji: "🥤",
                     description: "1 ly trà đá",
-                    momoLink: "https://me.momo.vn/N6I4u1T3TxCGtwUpfpF9/JxboZl5EOJDAagw"
                 },
                 {
                     amount: 18000,
                     emoji: "🍜",
                     description: "1 tô phở",
-                    momoLink: "https://me.momo.vn/N6I4u1T3TxCGtwUpfpF9/N1aMZAr09G5RbWm"
                 },
                 {
                     amount: 36000,
                     emoji: "🍤",
                     description: "1 nem chua",
-                    momoLink: "https://me.momo.vn/N6I4u1T3TxCGtwUpfpF9/pmbk2L3zwrkKazJ",
                     isDefault: true  // Mức mặc định được chọn sẵn
-                },
-                {
-                    amount: 90000,
-                    emoji: "🍕",
-                    description: "Pizza party",
-                    momoLink: "https://me.momo.vn/N6I4u1T3TxCGtwUpfpF9/JxboZl5Evm8Nagw"
                 },
                 {
                     amount: 200000,
                     emoji: "🎮",
                     description: "1 game mới",
-                    momoLink: "https://me.momo.vn/N6I4u1T3TxCGtwUpfpF9/pmbk2L3zDWmKazJ"
                 },
                 {
                     amount: 500000,
                     emoji: "💎",
                     description: "Nuôi Vợ Thằng Khác",
-                    momoLink: "https://me.momo.vn/N6I4u1T3TxCGtwUpfpF9/y1aK8ypMz1PrbQG"
                 }
             ],
             
@@ -1083,6 +1089,7 @@
                     document.querySelectorAll('.donation-card').forEach(c => c.classList.remove('selected'));
                     card.classList.add('selected');
                     selectedAmount = parseInt(card.dataset.amount);
+                    document.getElementById('customAmount').value = '';
                     updateButtonText();
                 });
             });
@@ -1198,6 +1205,41 @@
 
         // Run initialization
         init();
+        // CUSTOM AMOUNT
+        const customAmountInput =
+            document.getElementById('customAmount');
+
+        customAmountInput.addEventListener(
+            'input',
+            () => {
+
+                let value =
+                    parseInt(customAmountInput.value);
+
+                if(isNaN(value)) return;
+
+                if(value < 3000){
+
+                    customAmountInput.style.borderColor =
+                        '#ff7675';
+
+                    return;
+                }
+
+                customAmountInput.style.borderColor =
+                    '#00b894';
+
+                document
+                    .querySelectorAll('.donation-card')
+                    .forEach(c =>
+                        c.classList.remove('selected')
+                    );
+
+                selectedAmount = value;
+
+                updateButtonText();
+            }
+        );
 
         // Easter egg: Konami code
         let konamiCode = [];
